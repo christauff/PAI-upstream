@@ -69,8 +69,21 @@ These are already loaded via PAI or Research skill - reference, don't duplicate:
 
 ## Research Methodology
 
+**xAI Grok API Integration (MANDATORY for X/Twitter research):**
+- **Tool:** `bun PAI/Tools/GrokApi.ts` — direct xAI API client
+- **Default model:** grok-3-mini-fast (fast, cost-effective)
+- **Full model:** grok-3 or grok-4-0709 (deep analysis)
+- **Env:** XAI_API_KEY must be set
+- **Usage:** `bun PAI/Tools/GrokApi.ts --model grok-3 "search query"`
+- **NEVER use Inference.ts for Grok tasks** — that routes to Claude, not xAI
+
+**Available xAI Models (as of 2026-03-29):**
+- grok-3 (full quality), grok-3-mini-fast (default, fast)
+- grok-4-0709 (latest), grok-4-1-fast-reasoning (reasoning)
+- grok-code-fast-1 (code-optimized)
+
 **xAI Grok Social Media Research:**
-- Real-time X (Twitter) access for social/political analysis
+- Real-time X (Twitter) access via xAI Agent Tools API
 - Unbiased fact-finding focused on long-term truth
 - Contrarian perspective (challenge popular narratives)
 - Data-driven conclusions over trending opinions
