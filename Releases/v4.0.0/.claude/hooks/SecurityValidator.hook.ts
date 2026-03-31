@@ -17,7 +17,7 @@
  * OUTPUT:
  * - stdout: JSON decision object
  *   - {"continue": true} → Allow operation
- *   - {"decision": "ask", "message": "..."} → Prompt user for confirmation
+ *   - {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", ...}} → Prompt user
  * - exit(0): Normal completion (with decision)
  * - exit(2): Hard block (catastrophic operation prevented)
  *
@@ -32,8 +32,10 @@
  * - MUST RUN AFTER: None
  *
  * ERROR HANDLING:
- * - Missing patterns.yaml: Uses default safe patterns
- * - Parse errors: Logs warning, allows operation (fail-open for usability)
+ * - Missing patterns.yaml: Falls back to hardcoded deny rules (fail-closed)
+ * - Parse errors: Falls back to hardcoded deny rules (fail-closed)
+ * - Stdin errors: Exits with code 2 (fail-closed)
+ * - Unhandled errors: Exits with code 2 (fail-closed)
  * - Logging failures: Silent (should not block operations)
  *
  * PERFORMANCE:
@@ -55,8 +57,8 @@
  *
  * SECURITY MODEL:
  * - Defense in depth: Multiple pattern layers
+ * - Fail-closed on all error paths (exit 2 with hardcoded deny rules)
  * - Fail-safe for catastrophic operations (exit 2)
- * - Fail-open for minor concerns (log and allow)
  * - All decisions logged for audit trail
  */
 
@@ -210,12 +212,33 @@ function loadPatterns(): PatternsConfig {
   const patternsPath = getPatternsPath();
 
   if (!patternsPath) {
-    // No patterns file - fail open (allow all)
+    // No patterns file - FAIL CLOSED with hardcoded deny rules
+    console.error('SECURITY WARNING: No patterns.yaml found - failing closed with default deny rules');
     return {
       version: '0.0',
-      philosophy: { mode: 'permissive', principle: 'No patterns loaded - fail open' },
-      bash: { trusted: [], blocked: [], confirm: [], alert: [] },
-      paths: { zeroAccess: [], readOnly: [], confirmWrite: [], noDelete: [] },
+      philosophy: { mode: 'fail_closed', principle: 'No patterns loaded - fail closed with minimal safe defaults' },
+      bash: {
+        trusted: [],
+        blocked: [
+          { pattern: 'rm -rf /', reason: 'Filesystem destruction' },
+          { pattern: 'rm -rf ~', reason: 'Home directory destruction' },
+          { pattern: 'sudo rm -rf', reason: 'Destructive operation' },
+          { pattern: 'dd if=/dev/zero', reason: 'Disk overwrite' },
+          { pattern: 'mkfs', reason: 'Filesystem format' }
+        ],
+        confirm: [
+          { pattern: 'rm -r', reason: 'Recursive deletion' },
+          { pattern: 'git push --force', reason: 'Force push' },
+          { pattern: 'git push -f', reason: 'Force push' }
+        ],
+        alert: []
+      },
+      paths: {
+        zeroAccess: ['~/.ssh/id_*', '~/.aws/credentials', '**/.env'],
+        readOnly: ['/etc/**'],
+        confirmWrite: ['~/.claude/hooks/**'],
+        noDelete: ['.git/**']
+      },
       projects: {}
     };
   }
@@ -225,13 +248,33 @@ function loadPatterns(): PatternsConfig {
     patternsCache = parseYaml(content) as PatternsConfig;
     return patternsCache;
   } catch (error) {
-    // Parse error - fail open
-    console.error(`Failed to parse ${patternsSource} patterns.yaml:`, error);
+    // Parse error - FAIL CLOSED with hardcoded deny rules
+    console.error(`SECURITY ERROR: Failed to parse ${patternsSource} patterns.yaml - failing closed:`, error);
     return {
       version: '0.0',
-      philosophy: { mode: 'permissive', principle: 'Parse error - fail open' },
-      bash: { trusted: [], blocked: [], confirm: [], alert: [] },
-      paths: { zeroAccess: [], readOnly: [], confirmWrite: [], noDelete: [] },
+      philosophy: { mode: 'fail_closed', principle: 'Parse error - fail closed with minimal safe defaults' },
+      bash: {
+        trusted: [],
+        blocked: [
+          { pattern: 'rm -rf /', reason: 'Filesystem destruction' },
+          { pattern: 'rm -rf ~', reason: 'Home directory destruction' },
+          { pattern: 'sudo rm -rf', reason: 'Destructive operation' },
+          { pattern: 'dd if=/dev/zero', reason: 'Disk overwrite' },
+          { pattern: 'mkfs', reason: 'Filesystem format' }
+        ],
+        confirm: [
+          { pattern: 'rm -r', reason: 'Recursive deletion' },
+          { pattern: 'git push --force', reason: 'Force push' },
+          { pattern: 'git push -f', reason: 'Force push' }
+        ],
+        alert: []
+      },
+      paths: {
+        zeroAccess: ['~/.ssh/id_*', '~/.aws/credentials', '**/.env'],
+        readOnly: ['/etc/**'],
+        confirmWrite: ['~/.claude/hooks/**'],
+        noDelete: ['.git/**']
+      },
       projects: {}
     };
   }
@@ -435,8 +478,11 @@ function handleBash(input: HookInput): void {
         action_taken: 'Prompted user for confirmation'
       });
       console.log(JSON.stringify({
-        decision: 'ask',
-        message: `[PAI SECURITY] ⚠️ ${result.reason}\n\nCommand: ${command.slice(0, 200)}\n\nProceed?`
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'ask',
+          permissionDecisionReason: `[PAI SECURITY] ⚠️ ${result.reason}\n\nCommand: ${command.slice(0, 200)}\n\nProceed?`
+        }
       }));
       break;
 
@@ -502,8 +548,11 @@ function handleFileWrite(input: HookInput, toolName: string): void {
         action_taken: 'Prompted user for confirmation'
       });
       console.log(JSON.stringify({
-        decision: 'ask',
-        message: `[PAI SECURITY] ⚠️ ${result.reason}\n\nPath: ${filePath}\n\nProceed?`
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'ask',
+          permissionDecisionReason: `[PAI SECURITY] ⚠️ ${result.reason}\n\nPath: ${filePath}\n\nProceed?`
+        }
       }));
       break;
 
@@ -571,8 +620,8 @@ async function main(): Promise<void> {
     // setTimeout keeps the event loop alive, so we use process.exit to force cleanup.
     const timeout = setTimeout(() => {
       if (!raw.trim()) {
-        console.log(JSON.stringify({ continue: true }));
-        process.exit(0);
+        console.error('[PAI SECURITY] Stdin timeout - failing closed');
+        process.exit(2);
       }
     }, 200);
 
@@ -586,9 +635,9 @@ async function main(): Promise<void> {
 
     input = JSON.parse(raw);
   } catch {
-    // Parse error or timeout - fail open
-    console.log(JSON.stringify({ continue: true }));
-    return;
+    // Parse error or timeout - FAIL CLOSED
+    console.error('[PAI SECURITY] Failed to parse hook input - failing closed');
+    process.exit(2);
   }
 
   // Route to appropriate handler
@@ -612,7 +661,8 @@ async function main(): Promise<void> {
   }
 }
 
-// Run main, fail open on any error
-main().catch(() => {
-  console.log(JSON.stringify({ continue: true }));
+// Run main, FAIL CLOSED on any error
+main().catch((e) => {
+  console.error(`[PAI SECURITY] Unhandled error - failing closed: ${e}`);
+  process.exit(2);
 });
