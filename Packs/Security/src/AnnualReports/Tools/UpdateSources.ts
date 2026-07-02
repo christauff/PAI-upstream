@@ -8,8 +8,8 @@
  *   bun run UpdateSources.ts --diff          # Show diff with upstream
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { join } from 'path';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
+import { join, dirname } from 'path';
 
 const SOURCES_PATH = join(import.meta.dir, '..', 'Data', 'sources.json');
 const UPSTREAM_URL = 'https://raw.githubusercontent.com/jacobdjwilson/awesome-annual-security-reports/main/README.md';
@@ -48,50 +48,53 @@ function parseMarkdownReports(markdown: string): Map<string, Report[]> {
   let currentCategory = '';
   let currentSection = '';
 
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i].trim();
+  // Current upstream format (one line per report):
+  //   - [Vendor](vendor-url) - [Report Name](report-path) (year) - description
+  const entryRe = /^-\s+\[([^\]]+)\]\(([^)]+)\)\s*-\s*\[([^\]]+)\]\(([^)]+)\)/;
 
-    // Track main sections (Analysis Reports / Survey Reports)
+  for (const raw of lines) {
+    const line = raw.trim();
+
+    // Track main sections (only Analysis / Survey are captured; anything else,
+    // including the "## Contents" TOC and "## Resources", resets tracking so
+    // stray "- [..](..)" links there are never mistaken for report entries).
     if (line.startsWith('## Analysis Reports')) {
       currentSection = 'analysis';
-    } else if (line.startsWith('## Survey Reports')) {
+      currentCategory = '';
+      continue;
+    }
+    if (line.startsWith('## Survey Reports')) {
       currentSection = 'survey';
+      currentCategory = '';
+      continue;
+    }
+    if (line.startsWith('## ')) {
+      currentSection = '';
+      currentCategory = '';
+      continue;
     }
 
-    // Track categories (### headers)
+    // Track categories (### headers) within a tracked section
     if (line.startsWith('### ')) {
       currentCategory = line.replace('### ', '').toLowerCase().replace(/\s+/g, '_');
-      if (!reports.has(`${currentSection}_${currentCategory}`)) {
-        reports.set(`${currentSection}_${currentCategory}`, []);
+      if (currentSection) {
+        const key = `${currentSection}_${currentCategory}`;
+        if (!reports.has(key)) reports.set(key, []);
       }
+      continue;
     }
 
-    // Parse report entries (numbered lists or bullet points with links)
-    const reportMatch = line.match(/^\d+\.\s+\*\*(.+?)\*\*/) || line.match(/^-\s+\*\*(.+?)\*\*/);
-    if (reportMatch && currentCategory) {
-      const reportName = reportMatch[1];
-
-      // Look for vendor and URL in following lines
-      let vendor = '';
-      let url = '';
-
-      for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
-        const nextLine = lines[j].trim();
-        if (nextLine.startsWith('- Vendor:')) {
-          vendor = nextLine.replace('- Vendor:', '').trim();
-        } else if (nextLine.startsWith('- URL:')) {
-          url = nextLine.replace('- URL:', '').trim();
-        } else if (nextLine.match(/^\d+\.\s+\*\*/) || nextLine.startsWith('### ')) {
-          break;
-        }
-      }
-
-      if (vendor && url) {
-        const key = `${currentSection}_${currentCategory}`;
-        const existing = reports.get(key) || [];
-        existing.push({ vendor, name: reportName, url });
-        reports.set(key, existing);
-      }
+    // Parse report entries only when inside a tracked section + category
+    if (!currentSection || !currentCategory) continue;
+    const m = line.match(entryRe);
+    if (m) {
+      const vendor = m[1].trim();
+      const vendorUrl = m[2].trim();
+      const reportName = m[3].trim();
+      const key = `${currentSection}_${currentCategory}`;
+      const existing = reports.get(key) || [];
+      existing.push({ vendor, name: reportName, url: vendorUrl });
+      reports.set(key, existing);
     }
   }
 
@@ -216,15 +219,29 @@ async function main() {
       return;
     }
 
-    // Note: Full update would merge parsed data into sources.json
-    // For now, just update the timestamp since manual curation is preferred
-    current.metadata.lastUpdated = new Date().toISOString().split('T')[0];
-    current.metadata.totalReports = countReports(current);
+    // Rebuild sources.json from the parsed upstream data.
+    const updated: Sources = {
+      metadata: {
+        source: UPSTREAM_URL.replace('/README.md', ''),
+        lastUpdated: new Date().toISOString().split('T')[0],
+        totalReports: parsedTotal,
+      },
+      categories: { analysis: {}, survey: {} },
+    };
+    for (const [key, reports] of parsed) {
+      if (reports.length === 0) continue;
+      if (key.startsWith('analysis_')) {
+        updated.categories.analysis[key.slice('analysis_'.length)] = reports;
+      } else if (key.startsWith('survey_')) {
+        updated.categories.survey[key.slice('survey_'.length)] = reports;
+      }
+    }
 
-    writeFileSync(SOURCES_PATH, JSON.stringify(current, null, 2));
+    mkdirSync(dirname(SOURCES_PATH), { recursive: true });
+    writeFileSync(SOURCES_PATH, JSON.stringify(updated, null, 2));
     console.log('✅ Updated sources.json');
-    console.log(`   Total reports: ${current.metadata.totalReports}`);
-    console.log(`   Last updated: ${current.metadata.lastUpdated}`);
+    console.log(`   Total reports: ${updated.metadata.totalReports}`);
+    console.log(`   Last updated: ${updated.metadata.lastUpdated}`);
 
     console.log('\n💡 For full upstream sync, manually review changes at:');
     console.log(`   ${UPSTREAM_URL.replace('/README.md', '')}`);
