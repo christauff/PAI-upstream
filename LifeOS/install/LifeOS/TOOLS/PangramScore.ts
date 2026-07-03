@@ -27,7 +27,7 @@ const ENV_PATH = `${process.env.HOME}/.claude/.env`;
 // WritingGate Stop hook reads this so its pass condition is "Pangram ran on
 // this content", not "a token string is present" (Forge audit 2026-07-01).
 const RUNS_PATH = join(
-  process.env.LIFEOS_DIR || `${process.env.HOME}/.claude/LifeOS`,
+  process.env.LIFEOS_DIR || `${process.env.HOME}/.claude/LIFEOS`,
   "MEMORY", "OBSERVABILITY", "pangram-runs.jsonl",
 );
 export function normalizeForHash(text: string): string {

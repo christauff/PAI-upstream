@@ -315,7 +315,7 @@ function countHooks(): number {
 }
 
 function countWorkItems(): number {
-  const workDir = join(CLAUDE_DIR, "LifeOS", "MEMORY", "WORK");
+  const workDir = join(CLAUDE_DIR, "LIFEOS", "MEMORY", "WORK");
   if (!existsSync(workDir)) return 0;
   let count = 0;
   try {
@@ -327,7 +327,7 @@ function countWorkItems(): number {
 }
 
 function countLearnings(): number {
-  const learningsDir = join(CLAUDE_DIR, "LifeOS", "MEMORY", "LEARNING");
+  const learningsDir = join(CLAUDE_DIR, "LIFEOS", "MEMORY", "LEARNING");
   if (!existsSync(learningsDir)) return 0;
   let count = 0;
   const countRecursive = (dir: string) => {

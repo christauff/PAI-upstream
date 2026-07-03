@@ -77,7 +77,7 @@ type RunSummary = {
 
 const HOME = process.env.HOME || "";
 const CLAUDE_DIR = join(HOME, ".claude");
-const LIFEOS_DIR = join(CLAUDE_DIR, "LifeOS");
+const LIFEOS_DIR = join(CLAUDE_DIR, "LIFEOS");
 const USER_DIR = join(LIFEOS_DIR, "USER");
 const TOOLS_DIR = join(LIFEOS_DIR, "TOOLS");
 const PULSE_PAGES_DIR = join(LIFEOS_DIR, "PULSE", "pages");

@@ -282,7 +282,7 @@ function main(): never {
   const args = parseArgs(process.argv.slice(2));
 
   // Sanity: must be running against a recognizable LifeOS tree.
-  if (!existsSync(join(CLAUDE_ROOT, "LifeOS"))) {
+  if (!existsSync(join(CLAUDE_ROOT, "LIFEOS"))) {
     console.error(`PaiUpgrade: ${CLAUDE_ROOT}/PAI not found — is this a LifeOS install?`);
     process.exit(2);
   }

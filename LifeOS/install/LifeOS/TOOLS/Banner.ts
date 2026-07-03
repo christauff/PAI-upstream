@@ -164,7 +164,7 @@ function getStats(): SystemStats {
   let repoUrl = "github.com/danielmiessler/LifeOS";
   try {
     // Identity from DA_IDENTITY.md frontmatter (canonical source)
-    const daPath = join(CLAUDE_DIR, "LifeOS", "USER", "DIGITAL_ASSISTANT", "DA_IDENTITY.md");
+    const daPath = join(CLAUDE_DIR, "LIFEOS", "USER", "DIGITAL_ASSISTANT", "DA_IDENTITY.md");
     if (existsSync(daPath)) {
       const content = readFileSync(daPath, "utf-8");
       const m = content.match(/^---\n([\s\S]*?)\n---/);
@@ -179,12 +179,12 @@ function getStats(): SystemStats {
   } catch {}
   try {
     // LifeOS version: ~/.claude/LIFEOS/VERSION (single source of truth)
-    const versionPath = join(CLAUDE_DIR, "LifeOS", "VERSION");
+    const versionPath = join(CLAUDE_DIR, "LIFEOS", "VERSION");
     if (existsSync(versionPath)) {
       paiVersion = readFileSync(versionPath, "utf-8").trim() || paiVersion;
     }
     // Algorithm version: ~/.claude/LIFEOS/ALGORITHM/LATEST
-    const latestPath = join(CLAUDE_DIR, "LifeOS", "ALGORITHM", "LATEST");
+    const latestPath = join(CLAUDE_DIR, "LIFEOS", "ALGORITHM", "LATEST");
     if (existsSync(latestPath)) {
       algorithmVersion = readFileSync(latestPath, "utf-8").trim().replace(/^v/i, "") || algorithmVersion;
     }
@@ -198,7 +198,7 @@ function getStats(): SystemStats {
   // `--single` mode (~20ms each) instead of the full multi-key walk which
   // recursed into LIFEOS/USER/ (123k files) for keys nothing displays.
   let skills = 0, hooks = 0, sessions = 0;
-  const getCountsPath = join(CLAUDE_DIR, "LifeOS", "TOOLS", "GetCounts.ts");
+  const getCountsPath = join(CLAUDE_DIR, "LIFEOS", "TOOLS", "GetCounts.ts");
   try {
     const r = spawnSync("bun", [getCountsPath, "--single", "skills"], { encoding: "utf-8", timeout: 1000 });
     if (r.stdout) skills = parseInt(r.stdout.trim(), 10) || 0;
