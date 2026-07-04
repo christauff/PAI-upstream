@@ -184,7 +184,7 @@ MIT License - see [LICENSE](LICENSE) for details.
 **v6.0.0 (2026-07-02) — One Skill, One Install**
 - **Skill-based distribution** — the whole system now ships as a single self-contained skill (`LifeOS/`): the orchestrator (SKILL.md + Workflows + Tools) plus a complete install payload (system prompt, Algorithm, 49 skills, hooks, agents, Pulse, statusline, USER + MEMORY scaffolds). One directory, one install.
 - **First release under the LifeOS name** — the project was PAI (Personal AI Infrastructure); this is the same system, renamed.
-- **One-line install** — `curl -fsSL https://ourlifeos.ai/install.sh | bash` lays down the entire system.
+- **Install by prompt** — hand it to your AI (*"Read https://ourlifeos.ai/install and install LifeOS for me"*); a `curl … | bash` shortcut lays it down from a terminal too.
 - **Full Pulse on first boot** — the installer stands up the Life Dashboard and menu-bar app, ships generic TELOS templates so the dashboard renders on a fresh install, and runs the setup interview to seed it.
 - **Algorithm v6.23.0** — Current State → Ideal State across seven phases, classifier-driven mode + tier, cross-vendor verification at E4/E5.
 - **Clean by construction** — nothing personal ships; the USER tree is a blank template you populate. Release gates + a cross-vendor audit run before every publish.
