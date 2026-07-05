@@ -214,6 +214,17 @@ MIT License - see [LICENSE](LICENSE) for details.
 - **Installer fix** — the bootstrap `install.sh` now fetches the version it advertises.
 - [Full release notes](Releases/v6.0.5/README.md)
 
+**v6.0.3 (2026-07-04) — Comprehensive AI-native install**
+- Comprehensive component menu — INSTALL.md lays out the full two-tier model: Core plus à-la-carte enhancements (hooks, statusline, tooltips, spinner verbs, agents, Pulse, background jobs)
+- The `lifeos` launch alias wires `--append-system-prompt-file` so the constitutional layer actually loads
+- One canonical INSTALL.md rendered at ourlifeos.ai/install for humans and AIs
+- [Full release notes](Releases/v6.0.3/README.md)
+
+**v6.0.2 (2026-07-03) — .md-first AI-native install**
+- Skill-only distribution with an AI-native, `.md`-first install
+- The shipped install.sh pins v6.0.2 and points at danielmiessler/LifeOS
+- [Full release notes](Releases/v6.0.2/README.md)
+
 **v6.0.0 (2026-07-02) — One Skill, One Install**
 - **Skill-based distribution** — the whole system now ships as a single self-contained skill (`LifeOS/`): the orchestrator (SKILL.md + Workflows + Tools) plus a complete install payload (system prompt, Algorithm, 49 skills, hooks, agents, Pulse, statusline, USER + MEMORY scaffolds). One directory, one install.
 - **First release under the LifeOS name** — the project was PAI (Personal AI Infrastructure); this is the same system, renamed.
